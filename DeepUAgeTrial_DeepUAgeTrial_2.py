@@ -15,7 +15,7 @@ learning_rate_epochs = 5
 optimizer_direction = 'minimize'
 results_directory = 'output/'
 
-num_classes = 1
+num_classes = 20
 VECTOR_SIZE = 512
 FACE_DETECTION = False
 channel = 3
@@ -63,7 +63,7 @@ class Objective(object):
         head_model = Flatten(name="flatten")(head_model)
         head_model = Dense(unit, activation="relu")(head_model)  # implement optimization later
         head_model = Dropout(drop_out)(head_model)
-        head_model = Dense(20, activation="softmax")(head_model)
+        head_model = Dense(self.number_of_classes, activation="softmax")(head_model)
 
         model = Model(inputs=base_model.input, outputs=head_model)
 
@@ -122,7 +122,7 @@ shape_of_input = train_gen.image_shape
 
 objective = Objective(train_gen, val_gen, test_gen, results_directory,
                       maximum_epochs, early_stop_epochs,
-                      learning_rate_epochs, shape_of_input, num_classes)
+                      learning_rate_epochs, shape_of_input)
 
 if log_results:
 
