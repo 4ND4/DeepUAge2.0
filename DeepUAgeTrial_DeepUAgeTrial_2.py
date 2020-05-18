@@ -3,31 +3,30 @@ import keras
 import neptune
 import neptunecontrib.monitoring.optuna as opt_utils
 import optuna
-from keras import Model, optimizers
-from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
-from keras.layers import Dropout, Flatten, Dense
+from keras import Model, optimizers, Input
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.layers import Dropout, Flatten, Dense, AveragePooling2D
 import numpy as np
 from keras_preprocessing.image import ImageDataGenerator
-from optuna.samplers import TPESampler
 
 maximum_epochs = 1000
-early_stop_epochs = 10
+early_stop_epochs = 15
 learning_rate_epochs = 5
 optimizer_direction = 'minimize'
-number_of_random_points = 25  # random searches to start opt process
 results_directory = 'output/'
 
 num_classes = 1
-n_trials = 100
 VECTOR_SIZE = 512
 FACE_DETECTION = False
 channel = 3
 image_path = os.path.expanduser('~/Documents/Research/VISAGE_a/DeepUAge_dataset')
-log_results = True
+log_results = False
+image_size = 224
 
 
 class Objective(object):
-    def __init__(self, train_gen, valid_gen, test_gen, dir_save,
+    def __init__(
+            self, train_gen, valid_gen, test_gen, dir_save,
                  max_epochs, early_stop, learn_rate_epochs,
                  input_shape, number_of_classes):
         self.train_gen = train_gen
@@ -42,35 +41,33 @@ class Objective(object):
 
     def __call__(self, trial):
         batch_size = trial.suggest_categorical('batch_size', [32, 64, 96, 128])
+        unit = trial.suggest_categorical('unit', [2048, 1024, 512, 256])
         drop_out = trial.suggest_discrete_uniform('drop_out', 0.05, 0.5, 0.05)
-        learning_rate = trial.suggest_discrete_uniform('learning_rate', 0.001, 0.01, 0.00025)
-        freeze_layers = trial.suggest_categorical('freeze_layers', [15, 25, 32, 40, 100, 150])
+        learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1e-2)
         momentum = trial.suggest_uniform('momentum', 0, 1.0)
 
         # implement resnet50
 
-        resnet_50 = keras.applications.resnet.ResNet50(
+        base_model = keras.applications.resnet.ResNet50(
             include_top=False,
             weights='imagenet',
-            input_shape=self.input_shape,
+            input_tensor=Input(shape=self.input_shape)
         )
 
         # start - changed
 
-        x = Flatten()(resnet_50.output)
+        # add fresh layer
 
-        x = Dropout(drop_out)(x)
+        head_model = base_model.output
+        head_model = AveragePooling2D(pool_size=(7, 7))(head_model)
+        head_model = Flatten(name="flatten")(head_model)
+        head_model = Dense(unit, activation="relu")(head_model)  # implement optimization later
+        head_model = Dropout(drop_out)(head_model)
+        head_model = Dense(20, activation="softmax")(head_model)
 
-        predictions = Dense(
-            units=20,
-            kernel_initializer="he_normal",
-            use_bias=False,
-            activation="softmax"
-        )(x)
+        model = Model(inputs=base_model.input, outputs=head_model)
 
-        model = Model(inputs=resnet_50.inputs, outputs=predictions)
-
-        for layer in model.layers[:-freeze_layers]:
+        for layer in base_model.layers:
             layer.trainable = False
 
         model.compile(loss='categorical_crossentropy',
@@ -78,27 +75,20 @@ class Objective(object):
                       metrics=['mae'])
         model.summary()
 
+        exit(0)
+
         # callbacks for early stopping and for learning rate reducer
-        fn = self.dir_save + str(trial.number) + '_cnn.h5'
-        callbacks_list = [EarlyStopping(monitor='val_loss', patience=self.early_stop),
-                          ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=self.learn_rate_epochs,
-                                            verbose=1, mode='auto', min_lr=1.0e-6),
+        fn = self.dir_save + str(trial.number) + '_rn50.h5'
+        callbacks_list = [EarlyStopping(monitor='val_mae', patience=self.early_stop, verbose=1),
                           ModelCheckpoint(filepath=fn,
-                                          monitor='val_loss', save_best_only=True)
+                                          monitor='val_mae', save_best_only=True)
                           ]
 
-        # fit the model
-        # h = model.fit(x=self.xcalib, y=self.ycalib,
-        #              batch_size=batch_size,
-        #              epochs=self.max_epochs,
-        #              validation_data=(self.xvalid, self.yvalid),
-        #              shuffle=True, verbose=1,
-        #              callbacks=callbacks_list)
-
         h = model.fit_generator(
-            train_gen, train_gen.samples // batch_size, callbacks=callbacks_list,
-            validation_data=val_gen, validation_steps=val_gen.samples // batch_size,
-            epochs=maximum_epochs
+            train_gen,
+            validation_data=val_gen,
+            steps_per_epoch=train_gen.samples // batch_size, epochs=maximum_epochs,
+            callbacks=callbacks_list,
         )
 
         validation_loss = np.min(h.history['val_loss'])
@@ -108,12 +98,16 @@ class Objective(object):
 
 def getdata(train_path, val_path, test_path):
     # create a data generator
+
+    datagen_batch_size = 64
+
     datagen = ImageDataGenerator()
-    train_it = datagen.flow_from_directory(train_path, class_mode='categorical', batch_size=64)
+    train_it = datagen.flow_from_directory(train_path, class_mode='categorical', batch_size=datagen_batch_size,
+                                           target_size=(image_size, image_size))
     # load and iterate validation dataset
-    val_it = datagen.flow_from_directory(val_path, class_mode='categorical', batch_size=64)
+    val_it = datagen.flow_from_directory(val_path, class_mode='categorical', batch_size=datagen_batch_size)
     # load and iterate test dataset
-    test_it = datagen.flow_from_directory(test_path, class_mode='categorical', batch_size=64)
+    test_it = datagen.flow_from_directory(test_path, class_mode='categorical', batch_size=datagen_batch_size)
 
     return train_it, val_it, test_it
 
@@ -126,16 +120,14 @@ train_gen, val_gen, test_gen = getdata(train_path, validation_path, test_path)
 
 shape_of_input = train_gen.image_shape
 
-
 objective = Objective(train_gen, val_gen, test_gen, results_directory,
                       maximum_epochs, early_stop_epochs,
                       learning_rate_epochs, shape_of_input, num_classes)
 
-
 if log_results:
 
     neptune.init(project_qualified_name='4ND4/sandbox')
-    result = neptune.create_experiment(name='optuna Resnet50 DeepUAge')
+    result = neptune.create_experiment(name='optuna Resnet50 DeepUAge2.0')
     monitor = opt_utils.NeptuneMonitor()
     callback = [monitor]
     optuna.logging.set_verbosity(optuna.logging.WARNING)
@@ -143,12 +135,13 @@ else:
     callback = None
 
 study = optuna.create_study(direction=optimizer_direction,
-                            sampler=TPESampler(n_startup_trials=number_of_random_points))
+                            # sampler=TPESampler(n_startup_trials=number_of_random_points) read paper
+                            )
 
 study.optimize(
     objective,
     callbacks=callback,
-    n_trials=n_trials
+    n_trials=100
 )
 
 # save results
