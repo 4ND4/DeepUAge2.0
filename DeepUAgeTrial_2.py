@@ -17,7 +17,6 @@ results_directory = 'output/'
 
 num_classes = 20
 VECTOR_SIZE = 512
-FACE_DETECTION = False
 channel = 3
 image_path = os.path.expanduser('~/Documents/Research/VISAGE_a/DeepUAge_dataset')
 log_results = False
@@ -26,12 +25,12 @@ image_size = 224
 
 class Objective(object):
     def __init__(
-            self, train_gen, valid_gen, test_gen, dir_save,
-                 max_epochs, early_stop, learn_rate_epochs,
-                 input_shape, number_of_classes):
-        self.train_gen = train_gen
-        self.valid_gen = valid_gen
-        self.test_gen = test_gen
+            self, train_generator, valid_generator, test_generator, dir_save,
+            max_epochs, early_stop, learn_rate_epochs,
+            input_shape, number_of_classes):
+        self.train_gen = train_generator
+        self.valid_gen = valid_generator
+        self.test_gen = test_generator
         self.max_epochs = max_epochs
         self.early_stop = early_stop
         self.dir_save = dir_save
@@ -75,8 +74,6 @@ class Objective(object):
                       metrics=['mae'])
         model.summary()
 
-        exit(0)
-
         # callbacks for early stopping and for learning rate reducer
         fn = self.dir_save + str(trial.number) + '_rn50.h5'
         callbacks_list = [EarlyStopping(monitor='val_mae', patience=self.early_stop, verbose=1),
@@ -102,27 +99,31 @@ def getdata(train_path, val_path, test_path):
     datagen_batch_size = 64
 
     datagen = ImageDataGenerator()
-    train_it = datagen.flow_from_directory(train_path, class_mode='categorical', batch_size=datagen_batch_size,
-                                           target_size=(image_size, image_size))
+    train_it = datagen.flow_from_directory(
+        train_path, class_mode='categorical', batch_size=datagen_batch_size, target_size=(image_size, image_size)
+    )
     # load and iterate validation dataset
-    val_it = datagen.flow_from_directory(val_path, class_mode='categorical', batch_size=datagen_batch_size)
+    val_it = datagen.flow_from_directory(
+        val_path, class_mode='categorical', batch_size=datagen_batch_size, target_size=(image_size, image_size)
+    )
     # load and iterate test dataset
-    test_it = datagen.flow_from_directory(test_path, class_mode='categorical', batch_size=datagen_batch_size)
+    test_it = datagen.flow_from_directory(
+        test_path, class_mode='categorical', batch_size=datagen_batch_size, target_size=(image_size, image_size))
 
     return train_it, val_it, test_it
 
 
-train_path = os.path.join(image_path, 'train')
-validation_path = os.path.join(image_path, 'validation')
-test_path = os.path.join(image_path, 'test')
+train_ds_path = os.path.join(image_path, 'train')
+validation_ds_path = os.path.join(image_path, 'validation')
+test_ds_path = os.path.join(image_path, 'test')
 
-train_gen, val_gen, test_gen = getdata(train_path, validation_path, test_path)
+train_gen, val_gen, test_gen = getdata(train_ds_path, validation_ds_path, test_ds_path)
 
 shape_of_input = train_gen.image_shape
 
 objective = Objective(train_gen, val_gen, test_gen, results_directory,
                       maximum_epochs, early_stop_epochs,
-                      learning_rate_epochs, shape_of_input)
+                      learning_rate_epochs, shape_of_input, num_classes)
 
 if log_results:
 
