@@ -17,7 +17,6 @@ results_directory = 'output/'
 
 num_classes = 20
 VECTOR_SIZE = 512
-channel = 3
 image_path = os.path.expanduser('~/Documents/Research/VISAGE_a/DeepUAge_dataset')
 log_results = False
 image_size = 224
@@ -76,9 +75,9 @@ class Objective(object):
 
         # callbacks for early stopping and for learning rate reducer
         fn = self.dir_save + str(trial.number) + '_rn50.h5'
-        callbacks_list = [EarlyStopping(monitor='val_mae', patience=self.early_stop, verbose=1),
+        callbacks_list = [EarlyStopping(monitor='val_loss', patience=self.early_stop, verbose=1),
                           ModelCheckpoint(filepath=fn,
-                                          monitor='val_mae', save_best_only=True)
+                                          monitor='val_loss', save_best_only=True)
                           ]
 
         h = model.fit_generator(
