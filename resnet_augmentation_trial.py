@@ -10,7 +10,6 @@ import numpy as np
 from keras_preprocessing.image import ImageDataGenerator
 
 import config
-import hyperconfig
 
 maximum_epochs = config.MAXIMUM_EPOCHS
 early_stop_epochs = config.EARLY_STOP_EPOCHS
@@ -38,11 +37,16 @@ class Objective(object):
         self.learn_rate_epochs = learn_rate_epochs
 
     def __call__(self, trial):
-        batch_size = hyperconfig.BATCH_SIZE
-        unit = hyperconfig.UNIT
-        drop_out = hyperconfig.DROPOUT
-        learning_rate = hyperconfig.LEARNING_RATE
-        momentum = hyperconfig.MOMENTUM
+
+        # SET PARAMETERS HERE
+
+        batch_size = 32
+        unit = 256
+        drop_out = 0.35000000000000003
+        learning_rate = 0.0025389437553681262
+        momentum = 0.2753813367505939
+
+        # SET PARAMETERS HERE
 
         train_path = os.path.join(image_path, 'train')
         validation_path = os.path.join(image_path, 'validation')
@@ -116,9 +120,9 @@ def getdata(trial, train_path, val_path, test_path):
         brightness_range=brightness_range,
         rotation_range=rotation_range,
         zoom_range=zoom_range,
-        width_shift_range=shift,    # distortion
-        height_shift_range=shift,   # distortion
-        shear_range=shear_range,    # distortion
+        width_shift_range=shift,  # distortion
+        height_shift_range=shift,  # distortion
+        shear_range=shear_range,  # distortion
 
     )
 
