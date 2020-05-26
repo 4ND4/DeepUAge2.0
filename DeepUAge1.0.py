@@ -1,6 +1,9 @@
 import argparse
 import os
 from pathlib import Path
+
+import neptune
+import neptune_tensorboard as neptune_tb
 import numpy as np
 from keras.callbacks import LearningRateScheduler, ModelCheckpoint, EarlyStopping
 from keras.optimizers import SGD
@@ -54,6 +57,27 @@ class Schedule:
 def main():
     args = get_args()
 
+    experiment_name = 'yu4u'
+    early_stop_patience = 5
+
+    PARAMS = {
+        'epoch_nr': args.nb_epochs,
+        'batch_size': args.batch_size,
+        'learning_rate': args.lr,
+        # 'input_shape': (512, 32, 3),
+        'early_stop': early_stop_patience,
+        'image_size': config.IMAGE_SIZE,
+        'network': args.model_name
+    }
+
+    neptune.init(project_qualified_name='4ND4/sandbox')
+    neptune_tb.integrate_with_keras()
+    result = neptune.create_experiment(name=experiment_name, params=PARAMS)
+
+    name = result.id
+
+    print(name)
+
     predator_dir = args.pred_dir
 
     model_name = args.model_name
@@ -79,10 +103,13 @@ def main():
     if not output_dir.exists():
         output_dir.mkdir(parents=True)
 
-    callbacks = [EarlyStopping(monitor='val_age_mae', mode='min', verbose=1, patience=5),
+    if not os.path.exists('checkpoints/{}'.format(name)):
+        os.mkdir('checkpoints/{}'.format(name))
+
+    callbacks = [EarlyStopping(monitor='val_age_mae', mode='min', verbose=1, patience=early_stop_patience),
                  LearningRateScheduler(schedule=Schedule(nb_epochs, initial_lr=lr)),
-                 ModelCheckpoint(str(output_dir) + "]/weights.{epoch:03d}-{val_loss:.3f}-{"
-                                                   "val_age_mae:.3f}.hdf5",
+                 ModelCheckpoint(os.path.join(output_dir, name) + "]/weights.{epoch:03d}-{val_loss:.3f}-{"
+                                                                  "val_age_mae:.3f}.hdf5",
                                  monitor="val_age_mae",
                                  verbose=1,
                                  save_best_only=True,
@@ -95,7 +122,7 @@ def main():
                                verbose=1,
                                callbacks=callbacks)
 
-    np.savez(str(output_dir.joinpath("history.npz")), history=hist.history)
+    np.savez(str(output_dir.joinpath("history_{}.npz".format(name))), history=hist.history)
 
 
 if __name__ == '__main__':
