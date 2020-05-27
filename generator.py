@@ -30,7 +30,7 @@ def get_transform_func():
 
 
 class FaceGenerator(Sequence):
-    def __init__(self, predator_dir, batch_size=32, image_size=224, number_classes=101, regression=False):
+    def __init__(self, predator_dir, batch_size=32, image_size=224, number_classes=101):
         self.image_path_and_age = []
         self._load_predator(predator_dir)
         self.image_num = len(self.image_path_and_age)
@@ -39,7 +39,6 @@ class FaceGenerator(Sequence):
         self.indices = np.random.permutation(self.image_num)
         self.transform_image = get_transform_func()
         self.number_classes = number_classes
-        self.regression = regression
 
     def __len__(self):
         return self.image_num // self.batch_size
@@ -62,12 +61,7 @@ class FaceGenerator(Sequence):
             x[i] = self.transform_image(cv2.resize(image, (image_size, image_size)))
             y[i] = age
 
-        #return x, to_categorical(y, 101)
-
-        if self.regression:
-            return x, y
-        else:
-            return x, to_categorical(y, self.number_classes)
+        return x, to_categorical(y, self.number_classes)
 
     def on_epoch_end(self):
         self.indices = np.random.permutation(self.image_num)
@@ -91,14 +85,13 @@ class FaceGenerator(Sequence):
 
 
 class ValGenerator(Sequence):
-    def __init__(self, predator_dir, batch_size=32, image_size=224, number_classes=101, regression=False):
+    def __init__(self, predator_dir, batch_size=32, image_size=224, number_classes=101):
         self.image_path_and_age = []
         self._load_predator(predator_dir)
         self.image_num = len(self.image_path_and_age)
         self.batch_size = batch_size
         self.image_size = image_size
         self.number_classes = number_classes
-        self.regression = regression
 
     def __len__(self):
         return self.image_num // self.batch_size
@@ -119,17 +112,12 @@ class ValGenerator(Sequence):
             x[i] = cv2.resize(image, (image_size, image_size))
             y[i] = age
 
-        #return x, to_categorical(y, 101)
-
-        if self.regression:
-            return x, y
-        else:
-            return x, to_categorical(y, self.number_classes)
+        return x, to_categorical(y, self.number_classes)
 
     def _load_predator(self, predator_dir):
         predator_root = predator_dir
 
-        test_image_dir = os.path.join(predator_root, 'test')
+        test_image_dir = os.path.join(predator_root, 'validation')
 
         for root, dirs, _ in os.walk(test_image_dir):
             for d in dirs:
