@@ -7,9 +7,11 @@ import neptune_tensorboard as neptune_tb
 import numpy as np
 from keras.callbacks import LearningRateScheduler, ModelCheckpoint, EarlyStopping
 from keras.optimizers import SGD
+from keras_preprocessing.image import ImageDataGenerator
+
 import config
-from generator import FaceGenerator, ValGenerator
 from model import get_model, age_mae
+from random_eraser import get_random_eraser
 
 image_directory = os.path.expanduser(config.image_directory)
 
@@ -54,6 +56,44 @@ class Schedule:
         return self.initial_lr * 0.008
 
 
+def getdata(train_path, val_path, test_path):
+    # create a data generator
+
+    image_size = config.IMAGE_SIZE
+
+    datagen_batch_size = config.batch_size
+
+    datagen = ImageDataGenerator(
+
+        horizontal_flip=True,
+        width_shift_range=0.2,
+        height_shift_range=0.2,
+
+        zoom_range=[0.5, 1.0],
+        shear_range=0.2,
+        preprocessing_function=get_random_eraser(v_l=0, v_h=255))
+
+    # test data shouldn't be augmented
+
+    test_datagen = ImageDataGenerator()
+
+    train_it = datagen.flow_from_directory(
+        train_path,
+        class_mode='categorical',
+        batch_size=datagen_batch_size,
+        target_size=(image_size, image_size)
+    )
+    # load and iterate validation dataset
+    val_it = datagen.flow_from_directory(
+        val_path, class_mode='categorical', batch_size=datagen_batch_size, target_size=(image_size, image_size)
+    )
+    # load and iterate test dataset
+    test_it = test_datagen.flow_from_directory(
+        test_path, class_mode='categorical', batch_size=datagen_batch_size, target_size=(image_size, image_size))
+
+    return train_it, val_it, test_it
+
+
 def main():
     args = get_args()
 
@@ -64,7 +104,6 @@ def main():
         'epoch_nr': args.nb_epochs,
         'batch_size': args.batch_size,
         'learning_rate': args.lr,
-        # 'input_shape': (512, 32, 3),
         'early_stop': early_stop_patience,
         'image_size': config.IMAGE_SIZE,
         'network': args.model_name
@@ -78,8 +117,7 @@ def main():
 
     print(name)
 
-    predator_dir = args.pred_dir
-
+    image_path = args.pred_dir
     model_name = args.model_name
     batch_size = args.batch_size
     nb_epochs = args.nb_epochs
@@ -87,8 +125,11 @@ def main():
 
     image_size = config.IMAGE_SIZE
 
-    train_gen = FaceGenerator(predator_dir, batch_size=batch_size, image_size=image_size, number_classes=nb_classes)
-    val_gen = ValGenerator(predator_dir, batch_size=batch_size, image_size=image_size, number_classes=nb_classes)
+    train_path = os.path.join(image_path, 'train')
+    validation_path = os.path.join(image_path, 'validation')
+    test_path = os.path.join(image_path, 'test')
+
+    train_gen, val_gen, test_gen = getdata(train_path, validation_path, test_path)
 
     model = get_model(model_name=model_name, image_size=image_size, number_classes=nb_classes)
 
@@ -116,10 +157,10 @@ def main():
                                  mode="min")
                  ]
 
-    hist = model.fit_generator(generator=train_gen,
-                               epochs=nb_epochs,
+    hist = model.fit_generator(train_gen,
+                               steps_per_epoch=train_gen.samples // batch_size,
                                validation_data=val_gen,
-                               verbose=1,
+                               epochs=nb_epochs, verbose=1,
                                callbacks=callbacks)
 
     np.savez(str(output_dir.joinpath("history_{}.npz".format(name))), history=hist.history)
