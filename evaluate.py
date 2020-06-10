@@ -12,18 +12,22 @@ import matplotlib.pyplot as plt
 import seaborn as sn
 import pandas as pd
 import csv
+from model import age_mae
 
-model = load_model('77_cnn.h5')
+import config
 
-# {'batch_size': 32, 'drop_out': 0.4, 'learning_rate': 0.00625, 'freeze_layers': 150, 'momentum': 0.5654416167466141}
 
-image_path = os.path.expanduser('~/Documents/Research/VISAGE_a/DeepUAge_dataset')
+weights_filename = 'weights.030-2.360-1.540'
+
+model = load_model('models/{}.hdf5'.format(weights_filename), custom_objects={'age_mae': age_mae})
+
+image_path = os.path.expanduser(config.IMAGE_PATH)
 test_path = os.path.join(image_path, 'test')
 datagen_batch_size = 64
-batch_size = 32
-image_size = 256
-learning_rate = 0.00625
-momentum = 0.5654416167466141
+batch_size = 64
+image_size = 224
+learning_rate = 0.1
+momentum = 0.9
 
 datagen = ImageDataGenerator()
 
@@ -31,14 +35,14 @@ datagen = ImageDataGenerator()
 test_generator = datagen.flow_from_directory(
     test_path,
     class_mode='categorical',
-    batch_size=64,
+    batch_size=batch_size,
     target_size=(image_size, image_size),
     shuffle=False
 
 )
 
 optimizer = optimizers.SGD(lr=learning_rate, momentum=momentum, nesterov=True)
-model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['mae'])
+model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=[age_mae])
 
 true_labels = test_generator.classes
 
@@ -52,11 +56,10 @@ y_pred = np.array([np.argmax(x) for x in predictions])
 
 # get values and copy to
 
-with open('evaluation.csv', 'w') as f1:
+with open('evaluation_{}.csv'.format(weights_filename), 'w') as f1:
     writer = csv.writer(f1, delimiter='\t', lineterminator='\n', )
 
     for i in range(0, len(y_pred)):
-        # print(y_pred[i], y_true[i])
         row = [y_pred[i], y_true[i]]
         writer.writerow(row)
 
@@ -67,6 +70,6 @@ df_cm = pd.DataFrame(cm, range(20), range(20))
 sn.set(font_scale=1.4)  # for label size
 sn.heatmap(df_cm, annot=True, annot_kws={"size": 16})  # font size
 
-plt.savefig('confusion_matrix.png')
+plt.savefig('confusion_matrix_{}.png'.format(weights_filename))
 
 plt.show()
