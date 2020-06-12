@@ -30,9 +30,9 @@ def get_transform_func():
 
 
 class FaceGenerator(Sequence):
-    def __init__(self, predator_dir, batch_size=32, image_size=224, number_classes=101):
+    def __init__(self, image_dir, batch_size=32, image_size=224, number_classes=101):
         self.image_path_and_age = []
-        self._load_predator(predator_dir)
+        self._load_image(image_dir)
         self.image_num = len(self.image_path_and_age)
         self.batch_size = batch_size
         self.image_size = image_size
@@ -66,10 +66,10 @@ class FaceGenerator(Sequence):
     def on_epoch_end(self):
         self.indices = np.random.permutation(self.image_num)
 
-    def _load_predator(self, predator_dir):
-        predator_root = predator_dir
+    def _load_image(self, image_dir):
+        image_root = image_dir
 
-        train_image_dir = os.path.join(predator_root, 'train')
+        train_image_dir = os.path.join(image_root, 'train')
 
         for root, dirs, _ in os.walk(train_image_dir):
             for d in dirs:
@@ -85,9 +85,9 @@ class FaceGenerator(Sequence):
 
 
 class ValGenerator(Sequence):
-    def __init__(self, predator_dir, batch_size=32, image_size=224, number_classes=101):
+    def __init__(self, image_dir, batch_size=32, image_size=224, number_classes=101):
         self.image_path_and_age = []
-        self._load_predator(predator_dir)
+        self._load_image(image_dir)
         self.image_num = len(self.image_path_and_age)
         self.batch_size = batch_size
         self.image_size = image_size
@@ -114,10 +114,10 @@ class ValGenerator(Sequence):
 
         return x, to_categorical(y, self.number_classes)
 
-    def _load_predator(self, predator_dir):
-        predator_root = predator_dir
+    def _load_image(self, image_dir):
+        image_root = image_dir
 
-        test_image_dir = os.path.join(predator_root, 'validation')
+        test_image_dir = os.path.join(image_root, 'validation')
 
         for root, dirs, _ in os.walk(test_image_dir):
             for d in dirs:
