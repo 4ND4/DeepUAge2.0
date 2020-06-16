@@ -57,6 +57,7 @@ def getdata(train_path, val_path, test_path):
 
     # test data shouldn't be augmented
 
+    val_datagen = ImageDataGenerator()
     test_datagen = ImageDataGenerator()
 
     train_it = datagen.flow_from_directory(
@@ -66,7 +67,7 @@ def getdata(train_path, val_path, test_path):
         target_size=(image_size, image_size)
     )
     # load and iterate validation dataset
-    val_it = datagen.flow_from_directory(
+    val_it = val_datagen.flow_from_directory(
         val_path, class_mode='categorical', batch_size=datagen_batch_size, target_size=(image_size, image_size)
     )
     # load and iterate test dataset
