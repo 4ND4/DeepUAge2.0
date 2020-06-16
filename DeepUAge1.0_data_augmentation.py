@@ -40,7 +40,7 @@ def getdata(train_path, val_path, test_path):
 
     datagen_batch_size = config.batch_size
 
-    p = Augmentor.Pipeline()
+    p = Augmentor.Pipeline(train_path)
     p.flip_left_right(probability=0.5)
     p.rotate(probability=1, max_left_rotation=5, max_right_rotation=5)
     p.zoom_random(probability=0.5, percentage_area=0.95)
@@ -50,22 +50,13 @@ def getdata(train_path, val_path, test_path):
     p.random_brightness(probability=1, min_factor=0.8, max_factor=1.2)
     p.random_erasing(probability=0.5, rectangle_area=0.2)
 
-    datagen = ImageDataGenerator(
-
-        preprocessing_function=p.keras_preprocess_func()
-    )
-
     # test data shouldn't be augmented
 
     val_datagen = ImageDataGenerator()
     test_datagen = ImageDataGenerator()
 
-    train_it = datagen.flow_from_directory(
-        train_path,
-        class_mode='categorical',
-        batch_size=datagen_batch_size,
-        target_size=(image_size, image_size)
-    )
+    train_it = p.keras_generator(batch_size=datagen_batch_size)
+
     # load and iterate validation dataset
     val_it = val_datagen.flow_from_directory(
         val_path, class_mode='categorical', batch_size=datagen_batch_size, target_size=(image_size, image_size)
@@ -74,7 +65,7 @@ def getdata(train_path, val_path, test_path):
     test_it = test_datagen.flow_from_directory(
         test_path, class_mode='categorical', batch_size=datagen_batch_size, target_size=(image_size, image_size))
 
-    return train_it, val_it, test_it
+    return train_it, val_it, test_it, p.augmentor_images
 
 
 def main():
@@ -113,7 +104,7 @@ def main():
 
     print(name)
 
-    train_gen, val_gen, test_gen = getdata(train_path, validation_path, test_path)
+    train_gen, val_gen, test_gen, len_train = getdata(train_path, validation_path, test_path)
 
     model = get_model(model_name=model_name, image_size=image_size, number_classes=nb_classes)
 
@@ -141,8 +132,8 @@ def main():
                                  mode="min")
                  ]
 
-    hist = model.fit_generator(train_gen,
-                               steps_per_epoch=train_gen.samples // batch_size,
+    hist = model.fit_generator(generator=train_gen,
+                               steps_per_epoch=len(len_train) // batch_size,
                                validation_data=val_gen,
                                epochs=nb_epochs, verbose=1,
                                callbacks=callbacks)
