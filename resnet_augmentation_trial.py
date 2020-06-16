@@ -22,6 +22,7 @@ log_results = config.LOG_RESULTS
 image_size = config.IMAGE_SIZE
 
 
+
 class Objective(object):
     def __init__(
             self,

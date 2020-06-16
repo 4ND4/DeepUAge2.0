@@ -1,9 +1,10 @@
-MAXIMUM_EPOCHS = 1000
-EARLY_STOP_EPOCHS = 15
+MAXIMUM_EPOCHS = 1
+EARLY_STOP_EPOCHS = 5
 LEARNING_RATE_EPOCHS = 5
 OPTIMIZER_DIRECTION = 'minimize'
 RESULTS_DIRECTORY = 'output/'
-IMAGE_PATH = '~/Documents/Research/VISAGE_a/DeepUAge_dataset'
+IMAGE_PATH = '~/Documents/research/VISAGE_a/DeepUAge_dataset'
 IMAGE_SIZE = 224
 LOG_RESULTS = False
-
+image_directory = IMAGE_PATH
+batch_size = 64
