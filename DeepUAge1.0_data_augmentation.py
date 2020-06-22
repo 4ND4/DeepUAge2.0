@@ -52,36 +52,25 @@ def getdata(train_path, val_path, test_path):
     p.random_brightness(probability=1, min_factor=0.8, max_factor=1.2)
     p.random_erasing(probability=0.5, rectangle_area=0.2)
 
-    #train_it = p.keras_generator(batch_size=datagen_batch_size, image_data_format='channels_last')
-
-    train_datagen = ImageDataGenerator(
-        #rescale=1. / 255,
-        preprocessing_function=p.keras_preprocess_func()
-    )
+    data_generator = ImageDataGenerator(preprocessing_function=p.keras_preprocess_func())
 
     # test data shouldn't be augmented
 
-    val_datagen = ImageDataGenerator(
-        #rescale=1./255
-    )
+    test_datagen = ImageDataGenerator()
 
-    test_datagen = ImageDataGenerator(
-        #rescale=1./255
-    )
-
-    train_it = train_datagen.flow_from_directory(
+    train_it = data_generator.flow_from_directory(
         train_path, class_mode='categorical', batch_size=datagen_batch_size, target_size=(image_size, image_size)
     )
 
     # load and iterate validation dataset
-    val_it = val_datagen.flow_from_directory(
+    val_it = data_generator.flow_from_directory(
         val_path, class_mode='categorical', batch_size=datagen_batch_size, target_size=(image_size, image_size)
     )
     # load and iterate test dataset
     test_it = test_datagen.flow_from_directory(
         test_path, class_mode='categorical', batch_size=datagen_batch_size, target_size=(image_size, image_size))
 
-    return train_it, val_it, test_it, train_it.samples
+    return train_it, val_it, test_it
 
 
 def main():
@@ -123,7 +112,7 @@ def main():
     else:
         name = 'debug'
 
-    train_gen, val_gen, test_gen, len_train = getdata(train_path, validation_path, test_path)
+    train_gen, val_gen, test_gen = getdata(train_path, validation_path, test_path)
 
     model = get_model(model_name=model_name, image_size=image_size, number_classes=nb_classes)
 
@@ -152,9 +141,11 @@ def main():
                  ]
 
     hist = model.fit_generator(generator=train_gen,
-                               steps_per_epoch=len_train // batch_size,
+                               steps_per_epoch=train_gen.samples // batch_size,
                                validation_data=val_gen,
-                               epochs=nb_epochs, verbose=1,
+                               validation_steps=val_gen.samples // batch_size,
+                               epochs=nb_epochs,
+                               verbose=1,
                                callbacks=callbacks)
 
     np.savez(str(output_dir.joinpath("history_{}.npz".format(name))), history=hist.history)
