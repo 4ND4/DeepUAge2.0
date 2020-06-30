@@ -87,8 +87,8 @@ class Objective(object):
         if not os.path.exists('{}/{}/{}'.format(output_dir, name, str(trial.number))):
             os.mkdir('{}/{}/{}'.format(output_dir, name, str(trial.number)))
 
-        fn = os.path.join(self.dir_save, name, str(trial.number)) + "/weights.{epoch:03d}-{val_loss:.3f}-{"
-        "val_age_mae:.3f}.hdf5"
+        fn = os.path.join(self.dir_save, "{}/{}".format(name, str(trial.number)), "weights.{epoch:03d}-{val_loss:.3f}-{"
+                                                                                  "val_age_mae:.3f}.hdf5")
 
         callbacks_list = [EarlyStopping(monitor='val_loss', patience=self.early_stop, verbose=1),
                           ModelCheckpoint(filepath=fn,
@@ -126,7 +126,6 @@ results_directory = 'output/'
 objective = Objective(results_directory,
                       max_epochs, early_stop_epochs,
                       learning_rate_epochs, nb_classes)
-
 
 study = optuna.create_study(direction=optimizer_direction,
                             # sampler=TPESampler(n_startup_trials=number_of_random_points) read paper
