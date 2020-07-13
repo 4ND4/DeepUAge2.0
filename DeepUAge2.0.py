@@ -17,9 +17,10 @@ nb_classes = len(list_images)
 
 # monitor = 'val_age_mae'
 monitor = 'val_loss'
+log_results = config.LOG_RESULTS
 
 
-def getdata(train_path, val_path, test_path):
+def getdata(train_path, val_path):
     # create a data generator
 
     datagen_batch_size = config.batch_size
@@ -34,19 +35,29 @@ def getdata(train_path, val_path, test_path):
         val_path, class_mode='categorical', batch_size=datagen_batch_size, target_size=(image_size, image_size)
     )
     # load and iterate test dataset
-    test_it = datagen.flow_from_directory(
-        test_path, class_mode='categorical', batch_size=datagen_batch_size, target_size=(image_size, image_size))
+    #test_it = datagen.flow_from_directory(
+    #    test_path, class_mode='categorical', batch_size=datagen_batch_size, target_size=(image_size, image_size))
 
-    return train_it, val_it, test_it
+    return train_it, val_it
 
 
 def main():
     nb_epochs = config.MAXIMUM_EPOCHS
-    batch_size = config.batch_size
-    lr = 0.1
-    momentum = 0.9
-    model_name = 'ResNet50'
+
+    # changing params with winning hyper-params
+
+    # lr = 0.1
+    # momentum = 0.9
+    # batch_size = config.batch_size
     image_size = config.IMAGE_SIZE
+
+    batch_size = 96
+    lr = 0.0008828491766861475
+    momentum = 0.878361507747756
+    image_size = 224
+
+    model_name = 'ResNet50'
+
     output_dir = 'checkpoints'
 
     experiment_name = 'DeepUAge2.0'
@@ -54,7 +65,7 @@ def main():
 
     train_path = os.path.join(image_directory, 'train')
     validation_path = os.path.join(image_directory, 'validation')
-    test_path = os.path.join(image_directory, 'test')
+    # test_path = os.path.join(image_directory, 'test')
 
     PARAMS = {
         'epoch_nr': nb_epochs,
@@ -63,18 +74,22 @@ def main():
         'momentum': momentum,
         'early_stop': early_stop_patience,
         'image_size': image_size,
-        'network': model_name
+        'network': model_name,
+        'monitor': monitor
     }
 
-    neptune.init(project_qualified_name='4ND4/sandbox')
-    neptune_tb.integrate_with_keras()
-    result = neptune.create_experiment(name=experiment_name, params=PARAMS)
+    if log_results:
 
-    name = result.id
+        neptune.init(project_qualified_name='4ND4/sandbox')
+        neptune_tb.integrate_with_keras()
+        result = neptune.create_experiment(name=experiment_name, params=PARAMS)
+        name = result.id
+    else:
+        name = 'debug'
 
     print(name)
 
-    train_gen, val_gen, test_gen = getdata(train_path, validation_path, test_path)
+    train_gen, val_gen = getdata(train_path, validation_path)
 
     model = get_model(model_name=model_name, image_size=image_size, number_classes=nb_classes)
 
