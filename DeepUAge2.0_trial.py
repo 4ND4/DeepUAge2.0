@@ -20,7 +20,8 @@ early_stop_epochs = config.EARLY_STOP_EPOCHS
 learning_rate_epochs = config.LEARNING_RATE_EPOCHS
 optimizer_direction = 'minimize'
 name = 'debug'
-monitor = 'val_age_mae'
+val_monitor = 'val_age_mae'
+num_trials = config.NUMBER_TRIALS
 
 
 PARAMS = {
@@ -85,9 +86,9 @@ class Objective(object):
         fn = os.path.join(self.dir_save, "{}/{}".format(name, str(trial.number)), "weights.{epoch:03d}-{val_loss:.3f}-{"
                                                                                   "val_age_mae:.3f}.hdf5")
 
-        callbacks_list = [EarlyStopping(monitor=monitor, patience=self.early_stop, verbose=1),
+        callbacks_list = [EarlyStopping(monitor=val_monitor, patience=self.early_stop, verbose=1),
                           ModelCheckpoint(filepath=fn,
-                                          monitor=monitor, save_best_only=True)
+                                          monitor=val_monitor, save_best_only=True)
                           ]
 
         train_path = os.path.join(image_directory, 'train')
@@ -102,7 +103,7 @@ class Objective(object):
             callbacks=callbacks_list,
         )
 
-        validation_loss = np.min(h.history[monitor])
+        validation_loss = np.min(h.history[val_monitor])
 
         return validation_loss
 
@@ -135,7 +136,7 @@ study = optuna.create_study(direction=optimizer_direction)
 study.optimize(
     objective,
     callbacks=callback,
-    n_trials=config.NUMBER_TRIALS
+    n_trials=num_trials
 )
 
 # save results
