@@ -132,31 +132,17 @@ objective = Objective(results_directory,
 
 study = optuna.create_study(direction=optimizer_direction)
 
-try:
+study.optimize(
+    objective,
+    callbacks=callback,
+    n_trials=config.NUMBER_TRIALS
+)
 
-    study.optimize(
-        objective,
-        callbacks=callback,
-        n_trials=config.NUMBER_TRIALS
-    )
+# save results
+df_results = study.trials_dataframe()
+df_results.to_pickle(results_directory + 'df_optuna_results.pkl')
+df_results.to_csv(results_directory + 'df_optuna_results.csv')
 
-    # save results
-    df_results = study.trials_dataframe()
-    df_results.to_pickle(results_directory + 'df_optuna_results.pkl')
-    df_results.to_csv(results_directory + 'df_optuna_results.csv')
-
-    print('Minimum error: ' + str(study.best_value))
-    print('Best parameter: ' + str(study.best_params))
-    print('Best trial: ' + str(study.best_trial))
-except Exception as ex:
-    print(ex)
-
-    df_results = study.trials_dataframe()
-    df_results.to_pickle(results_directory + 'df_optuna_results.pkl')
-    df_results.to_csv(results_directory + 'df_optuna_results.csv')
-
-    print('printing summary....')
-
-    print('Minimum error: ' + str(study.best_value))
-    print('Best parameter: ' + str(study.best_params))
-    print('Best trial: ' + str(study.best_trial))
+print('Minimum error: ' + str(study.best_value))
+print('Best parameter: ' + str(study.best_params))
+print('Best trial: ' + str(study.best_trial))
