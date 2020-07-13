@@ -75,7 +75,8 @@ def main():
         'early_stop': early_stop_patience,
         'image_size': image_size,
         'network': model_name,
-        'monitor': monitor
+        'monitor': monitor,
+        'dataset_path': image_directory
     }
 
     if log_results:
