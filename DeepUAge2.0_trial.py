@@ -133,11 +133,15 @@ objective = Objective(results_directory,
 
 study = optuna.create_study(direction=optimizer_direction)
 
-study.optimize(
-    objective,
-    callbacks=callback,
-    n_trials=num_trials
-)
+try:
+
+    study.optimize(
+        objective,
+        callbacks=callback,
+        n_trials=num_trials
+    )
+except Exception as ex:
+    print(ex)
 
 # save results
 df_results = study.trials_dataframe()
