@@ -21,11 +21,8 @@ import config
 
 
 log_results = config.LOG_RESULTS
-
 weights_filename = 'weights.087-1.799-1.528'
-
 experiment_name = 'SAN-278'
-
 model = load_model('checkpoints/{}/{}.hdf5'.format(experiment_name, weights_filename), custom_objects={'age_mae': age_mae})
 
 image_path = os.path.expanduser(config.IMAGE_PATH)
@@ -35,6 +32,9 @@ image_size = 224
 learning_rate = 0.1
 momentum = 0.9
 
+# get class size
+
+class_size = len(os.listdir(os.path.join(image_path, 'test')))
 
 PARAMS = {
         'batch_size': batch_size,
@@ -48,7 +48,7 @@ if log_results:
 
     neptune.init(project_qualified_name='4ND4/sandbox')
     #neptune_tb.integrate_with_keras()
-    result = neptune.create_experiment(name='evaluation_{}'.format(experiment_name), params=PARAMS, tags='evaluation')
+    result = neptune.create_experiment(name='evaluation_{}'.format(experiment_name), params=PARAMS, tags=['evaluation'])
     name = result.id
 else:
     name = 'debug'
@@ -93,11 +93,10 @@ with open('evaluation_{}_{}.csv'.format(name, weights_filename), 'w') as f1:
 
 cm = sklearn.metrics.confusion_matrix(y_true, y_pred)
 
-df_cm = pd.DataFrame(cm, range(20), range(20))
+df_cm = pd.DataFrame(cm, range(class_size), range(class_size))
 
 sn.set(font_scale=1.4)  # for label size
 sn.heatmap(df_cm, annot=True, annot_kws={"size": 16})  # font size
 
-plt.savefig('confusion_matrix_{}.png'.format(weights_filename))
-
+plt.savefig('confusion_matrix_{}_{}.png'.format(experiment_name, weights_filename))
 plt.show()
