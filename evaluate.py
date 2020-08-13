@@ -3,7 +3,6 @@
 
 # create network
 import os
-
 import neptune
 import sklearn.metrics
 import numpy as np
@@ -23,6 +22,7 @@ import config
 log_results = config.LOG_RESULTS
 weights_filename = 'weights.087-1.799-1.528'
 experiment_name = 'SAN-278'
+
 model = load_model('checkpoints/{}/{}.hdf5'.format(experiment_name, weights_filename), custom_objects={'age_mae': age_mae})
 
 image_path = os.path.expanduser(config.IMAGE_PATH)
@@ -34,7 +34,7 @@ momentum = 0.9
 
 # get class size
 
-class_size = len(os.listdir(os.path.join(image_path, 'test')))
+class_size = len([x for x in os.listdir(os.path.join(image_path, 'test')) if not x.startswith('.')])
 
 PARAMS = {
         'batch_size': batch_size,
@@ -47,7 +47,6 @@ PARAMS = {
 if log_results:
 
     neptune.init(project_qualified_name='4ND4/sandbox')
-    #neptune_tb.integrate_with_keras()
     result = neptune.create_experiment(name='evaluation_{}'.format(experiment_name), params=PARAMS, tags=['evaluation'])
     name = result.id
 else:
