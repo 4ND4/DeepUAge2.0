@@ -131,22 +131,13 @@ objective = Objective(results_directory,
                       max_epochs, early_stop_epochs,
                       learning_rate_epochs, nb_classes)
 
-study = optuna.create_study(direction=optimizer_direction)
+study = optuna.create_study(direction=optimizer_direction, storage='sqlite:///trials.db')
 
-try:
-
-    study.optimize(
+study.optimize(
         objective,
         callbacks=callback,
         n_trials=num_trials
     )
-except Exception as ex:
-    print(ex)
-
-# save results
-df_results = study.trials_dataframe()
-df_results.to_pickle(results_directory + 'df_optuna_results.pkl')
-df_results.to_csv(results_directory + 'df_optuna_results.csv')
 
 print('Minimum error: ' + str(study.best_value))
 print('Best parameter: ' + str(study.best_params))
