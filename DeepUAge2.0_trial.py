@@ -131,7 +131,7 @@ objective = Objective(results_directory,
                       max_epochs, early_stop_epochs,
                       learning_rate_epochs, nb_classes)
 
-study = optuna.create_study(direction=optimizer_direction, storage='sqlite:///trials.db')
+study = optuna.create_study(direction=optimizer_direction, storage='sqlite:///{}.db'.format(name))
 
 study.optimize(
         objective,
