@@ -22,7 +22,8 @@ optimizer_direction = 'minimize'
 name = 'debug'
 val_monitor = 'val_age_mae'
 num_trials = config.NUMBER_TRIALS
-
+resume = True
+resume_experiment = 'SAN-288'
 
 PARAMS = {
         'epoch_nr': max_epochs,
@@ -32,9 +33,17 @@ PARAMS = {
         'trials': config.NUMBER_TRIALS
     }
 
+TAGS = ['trial']
+
+if resume:
+    # get experiment name
+
+    TAGS.append('resume')
+    TAGS.append(resume_experiment)
+
 if log_results:
     neptune.init(project_qualified_name='4ND4/sandbox')
-    result = neptune.create_experiment(name='optuna DeepUAge2.0', params=PARAMS)
+    result = neptune.create_experiment(name='optuna DeepUAge2.0', params=PARAMS, tags=TAGS)
     monitor = opt_utils.NeptuneMonitor()
     callback = [monitor]
     optuna.logging.set_verbosity(optuna.logging.WARNING)
@@ -131,7 +140,17 @@ objective = Objective(results_directory,
                       max_epochs, early_stop_epochs,
                       learning_rate_epochs, nb_classes)
 
-study = optuna.create_study(direction=optimizer_direction, storage='sqlite:///{}.db'.format(name))
+if resume:
+    study_name = resume_experiment
+else:
+    study_name = name
+
+study = optuna.create_study(
+    study_name=study_name,
+    direction=optimizer_direction,
+    storage='sqlite:///{}.db'.format(study_name),
+    load_if_exists=True
+)
 
 study.optimize(
         objective,
